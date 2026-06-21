@@ -25,6 +25,5 @@ Thumbs.db
 # Documentation and planning files (unnecessary/internal readmes)
 *.readme
 *.md
-frontend/README.md
-frontend/AGENTS.md
-frontend/CLAUDE.md
+!/README.md
+!/readme.md
