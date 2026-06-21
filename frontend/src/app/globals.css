@@ -1,0 +1,290 @@
+@import "tailwindcss";
+
+/* ========================================
+   MediCore Design System
+   ======================================== */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+
+  /* Brand Colors */
+  --mc-primary: #2563eb;
+  --mc-primary-light: #3b82f6;
+  --mc-primary-dark: #1d4ed8;
+  --mc-primary-50: #eff6ff;
+  --mc-primary-100: #dbeafe;
+  --mc-primary-900: #1e3a5f;
+
+  --mc-accent: #06b6d4;
+  --mc-accent-light: #22d3ee;
+
+  --mc-success: #10b981;
+  --mc-success-light: #d1fae5;
+  --mc-warning: #f59e0b;
+  --mc-warning-light: #fef3c7;
+  --mc-danger: #ef4444;
+  --mc-danger-light: #fee2e2;
+
+  --mc-surface: #ffffff;
+  --mc-surface-raised: #ffffff;
+  --mc-surface-overlay: rgba(255, 255, 255, 0.85);
+  --mc-border: #e2e8f0;
+  --mc-border-light: #f1f5f9;
+
+  --mc-text-primary: #0f172a;
+  --mc-text-secondary: #475569;
+  --mc-text-muted: #94a3b8;
+
+  /* Shadows */
+  --mc-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --mc-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --mc-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --mc-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --mc-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --mc-shadow-glow: 0 0 40px rgba(37, 99, 235, 0.15);
+
+  /* Radii */
+  --mc-radius: 0.75rem;
+  --mc-radius-lg: 1rem;
+  --mc-radius-xl: 1.5rem;
+}
+
+/* ========================================
+   Base Styles
+   ======================================== */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter, 'Inter', system-ui, -apple-system, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid var(--mc-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ========================================
+   Keyframe Animations
+   ======================================== */
+
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -50px) scale(1.1); }
+  50% { transform: translate(-20px, 20px) scale(0.9); }
+  75% { transform: translate(20px, 40px) scale(1.05); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes toast-out {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(100%); }
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ========================================
+   Animation Utility Classes
+   ======================================== */
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.4s ease-out forwards;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.3s ease-out forwards;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 6s ease infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-toast-in {
+  animation: toast-in 0.3s ease-out forwards;
+}
+
+.animate-toast-out {
+  animation: toast-out 0.3s ease-in forwards;
+}
+
+.animate-modal-in {
+  animation: modal-in 0.3s ease-out forwards;
+}
+
+.animate-overlay-in {
+  animation: overlay-in 0.2s ease-out forwards;
+}
+
+/* ========================================
+   Component Styles
+   ======================================== */
+
+/* Glassmorphism card */
+.glass-card {
+  background: var(--mc-surface-overlay);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--mc-radius-lg);
+  box-shadow: var(--mc-shadow-lg);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, var(--mc-primary) 0%, var(--mc-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Animated gradient mesh background */
+.gradient-mesh {
+  background:
+    radial-gradient(at 40% 20%, rgba(37, 99, 235, 0.12) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(6, 182, 212, 0.1) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(139, 92, 246, 0.08) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(37, 99, 235, 0.06) 0px, transparent 50%);
+}
+
+/* Skeleton loading */
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--mc-radius);
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Staggered children animation */
+.stagger-children > * {
+  opacity: 0;
+  animation: fade-in-up 0.5s ease-out forwards;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
