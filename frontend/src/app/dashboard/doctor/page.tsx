@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { FullPageSpinner } from '@/components/LoadingSpinner';
 import {
   LogOut, Heart, Stethoscope, Calendar, FileText, ClipboardList,
@@ -24,9 +25,9 @@ export default function DoctorDashboard() {
   const profile = user.profile;
 
   const quickStats = [
-    { label: 'Appointments Today', value: '—', icon: Calendar, color: 'blue', note: 'Phase 3' },
-    { label: 'Prescriptions', value: '—', icon: FileText, color: 'violet', note: 'Phase 3' },
-    { label: 'Lab Orders', value: '—', icon: ClipboardList, color: 'emerald', note: 'Phase 3' },
+    { label: 'Appointments Today', value: '—', icon: Calendar, color: 'blue', note: 'Phase 3', href: '/dashboard/doctor/appointments' },
+    { label: 'Prescriptions', value: '—', icon: FileText, color: 'violet', note: 'Phase 3', href: '#' },
+    { label: 'Lab Orders', value: '—', icon: ClipboardList, color: 'emerald', note: 'Phase 3', href: '#' },
   ];
 
   return (
@@ -72,7 +73,7 @@ export default function DoctorDashboard() {
         {/* Quick Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8 stagger-children">
           {quickStats.map((stat) => (
-            <div key={stat.label} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm relative overflow-hidden">
+            <Link href={stat.href} key={stat.label} className="block bg-white rounded-2xl p-6 border border-gray-100 shadow-sm relative overflow-hidden hover:shadow-md hover:border-gray-200 transition-all">
               <div className="flex items-center justify-between mb-3">
                 <div className={`w-11 h-11 rounded-xl bg-${stat.color}-50 flex items-center justify-center`}>
                   <stat.icon size={20} className={`text-${stat.color}-600`} />
@@ -81,7 +82,7 @@ export default function DoctorDashboard() {
               </div>
               <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
               <p className="text-sm text-gray-500 mt-0.5">{stat.label}</p>
-            </div>
+            </Link>
           ))}
         </div>
 

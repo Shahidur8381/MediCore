@@ -118,6 +118,28 @@ export default function Login() {
           </button>
         </form>
 
+        {/* Developer Helper Box */}
+        <div className="mt-6 p-4 rounded-xl bg-indigo-50 border border-indigo-100 animate-fade-in-up">
+          <div className="flex items-center gap-2 mb-2 text-indigo-700">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2v5Z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></svg>
+            <span className="text-sm font-bold">Developer Credentials</span>
+          </div>
+          <div className="text-xs text-indigo-600 space-y-1.5">
+            <div className="flex justify-between border-b border-indigo-100 pb-1">
+              <span>Admin:</span> <span className="font-mono bg-indigo-100 px-1 rounded">admin</span>
+            </div>
+            <div className="flex justify-between border-b border-indigo-100 pb-1">
+              <span>Doctor:</span> <span className="font-mono bg-indigo-100 px-1 rounded">Doctor1</span> - <span className="font-mono bg-indigo-100 px-1 rounded">Doctor5</span>
+            </div>
+            <div className="flex justify-between border-b border-indigo-100 pb-1">
+              <span>Patient:</span> <span className="font-mono bg-indigo-100 px-1 rounded">Patient1</span> - <span className="font-mono bg-indigo-100 px-1 rounded">Patient5</span>
+            </div>
+            <div className="flex justify-between pt-1 font-medium">
+              <span>Password (All):</span> <span className="font-mono bg-indigo-100 px-1 rounded">MediCore</span>
+            </div>
+          </div>
+        </div>
+
         {/* Divider + Register */}
         <div className="mt-8 pt-6 border-t border-gray-100 text-center text-sm text-gray-500">
           New patient?{' '}
