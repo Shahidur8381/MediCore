@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { FullPageSpinner } from '@/components/LoadingSpinner';
 import {
   LogOut, Heart, Calendar, FileText, CreditCard, TestTubes,
@@ -24,10 +25,10 @@ export default function PatientDashboard() {
   const profile = user.profile;
 
   const quickActions = [
-    { label: 'Book Appointment', description: 'Schedule a visit with a doctor', icon: Calendar, color: 'blue', note: 'Phase 3' },
-    { label: 'My Prescriptions', description: 'View your medical prescriptions', icon: FileText, color: 'violet', note: 'Phase 3' },
-    { label: 'Lab Results', description: 'Check your test results', icon: TestTubes, color: 'amber', note: 'Phase 3' },
-    { label: 'Billing', description: 'View and pay your bills', icon: CreditCard, color: 'emerald', note: 'Phase 5' },
+    { label: 'Book Appointment', description: 'Schedule a visit with a doctor', icon: Calendar, color: 'blue', note: 'Phase 3', href: '/dashboard/patient/appointments' },
+    { label: 'My Prescriptions', description: 'View your medical prescriptions', icon: FileText, color: 'violet', note: 'Phase 3', href: '/dashboard/patient/prescriptions' },
+    { label: 'Lab Results', description: 'Check your test results', icon: TestTubes, color: 'amber', note: 'Phase 3', href: '/dashboard/patient/lab-results' },
+    { label: 'Billing', description: 'View and pay your bills', icon: CreditCard, color: 'emerald', note: 'Phase 5', href: '#' },
   ];
 
   return (
@@ -75,7 +76,7 @@ export default function PatientDashboard() {
         {/* Quick Actions */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 stagger-children">
           {quickActions.map((action) => (
-            <div key={action.label} className="group bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all duration-300 cursor-pointer relative overflow-hidden">
+            <Link href={action.href} key={action.label} className="group bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all duration-300 cursor-pointer relative overflow-hidden block">
               <div className="flex items-center justify-between mb-3">
                 <div className={`w-11 h-11 rounded-xl bg-${action.color}-50 flex items-center justify-center`}>
                   <action.icon size={20} className={`text-${action.color}-600`} />
@@ -84,7 +85,7 @@ export default function PatientDashboard() {
               </div>
               <h3 className="text-sm font-bold text-gray-900">{action.label}</h3>
               <p className="text-xs text-gray-500 mt-0.5">{action.description}</p>
-            </div>
+            </Link>
           ))}
         </div>
 
