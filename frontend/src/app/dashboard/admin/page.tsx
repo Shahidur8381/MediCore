@@ -8,7 +8,7 @@ import { useToast } from '@/components/Toast';
 import LoadingSpinner, { FullPageSpinner } from '@/components/LoadingSpinner';
 import {
   Users, Building2, LogOut, Plus, X, Trash2, Heart, Pencil,
-  LayoutDashboard, UserCircle, Menu
+  LayoutDashboard, UserCircle, Menu, Banknote
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -19,6 +19,8 @@ export default function AdminDashboard() {
   const [departments, setDepartments] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
   const [stats, setStats] = useState({ departments: 0, doctors: 0, patients: 0 });
+  const [financialSummary, setFinancialSummary] = useState({ TOTAL_ADMIN_EARNINGS: 0, TOTAL_DOCTOR_EARNINGS: 0, TOTAL_REVENUE: 0 });
+  const [ledger, setLedger] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [dataLoading, setDataLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -53,14 +55,18 @@ export default function AdminDashboard() {
   const fetchData = async () => {
     setDataLoading(true);
     try {
-      const [deptRes, docRes, statsRes] = await Promise.all([
+      const [deptRes, docRes, statsRes, finSummaryRes, ledgerRes] = await Promise.all([
         api.get('/api/departments'),
         api.get('/api/doctors'),
         api.get('/api/stats'),
+        api.get('/api/financial/summary'),
+        api.get('/api/financial/ledger')
       ]);
       setDepartments(deptRes.data);
       setDoctors(docRes.data);
       setStats(statsRes.data);
+      setFinancialSummary(finSummaryRes.data);
+      setLedger(ledgerRes.data);
     } catch (err) {
       console.error('Error fetching data', err);
     } finally {
@@ -162,6 +168,7 @@ export default function AdminDashboard() {
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'departments', label: 'Departments', icon: Building2 },
     { id: 'doctors', label: 'Doctors', icon: Users },
+    { id: 'financial', label: 'Financial', icon: Banknote },
   ];
 
   const inputCls = "w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white/70 transition-all";
@@ -205,9 +212,9 @@ export default function AdminDashboard() {
         <header className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-4">
             <button onClick={() => setSidebarOpen(true)} className="md:hidden text-gray-600"><Menu size={22} /></button>
-            <h1 className="text-xl font-bold text-gray-800">{activeTab === 'overview' ? 'Dashboard' : activeTab === 'departments' ? 'Departments' : 'Doctors'}</h1>
+            <h1 className="text-xl font-bold text-gray-800">{activeTab === 'overview' ? 'Dashboard' : activeTab === 'departments' ? 'Departments' : activeTab === 'financial' ? 'Financial Tracking' : 'Doctors'}</h1>
           </div>
-          {activeTab !== 'overview' && (
+          {(activeTab !== 'overview' && activeTab !== 'financial') && (
             <button onClick={() => activeTab === 'departments' ? setShowDeptModal(true) : setShowDocModal(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold shadow-md shadow-blue-600/20 transition-all active:scale-[0.97]">
               <Plus size={16} /> Add {activeTab === 'departments' ? 'Department' : 'Doctor'}
@@ -334,6 +341,70 @@ export default function AdminDashboard() {
                     {doctors.length === 0 && <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-400 text-sm">No doctors found. Click &quot;Add Doctor&quot; to register one.</td></tr>}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+          {/* ===== Financial Tracking ===== */}
+          {activeTab === 'financial' && (
+            <div className="animate-fade-in">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8 stagger-children">
+                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center"><Banknote size={22} className="text-emerald-600" /></div>
+                  </div>
+                  <p className="text-3xl font-bold text-gray-900">{dataLoading ? <span className="skeleton inline-block w-12 h-8 rounded" /> : `৳${financialSummary.TOTAL_REVENUE}`}</p>
+                  <p className="text-sm text-gray-500 mt-1">Total Revenue</p>
+                </div>
+                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center"><Building2 size={22} className="text-blue-600" /></div>
+                  </div>
+                  <p className="text-3xl font-bold text-gray-900">{dataLoading ? <span className="skeleton inline-block w-12 h-8 rounded" /> : `৳${financialSummary.TOTAL_ADMIN_EARNINGS}`}</p>
+                  <p className="text-sm text-gray-500 mt-1">Hospital (Admin) Earnings</p>
+                </div>
+                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center"><Users size={22} className="text-violet-600" /></div>
+                  </div>
+                  <p className="text-3xl font-bold text-gray-900">{dataLoading ? <span className="skeleton inline-block w-12 h-8 rounded" /> : `৳${financialSummary.TOTAL_DOCTOR_EARNINGS}`}</p>
+                  <p className="text-sm text-gray-500 mt-1">Doctor Earnings</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-gray-50/80 border-b border-gray-100">
+                      <tr>
+                        <th className="px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Transaction ID</th>
+                        <th className="px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                        <th className="px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
+                        <th className="px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Doctor</th>
+                        <th className="px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Amount</th>
+                        <th className="px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Admin Share</th>
+                        <th className="px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Doctor Share</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {ledger.map((tx: any) => (
+                        <tr key={tx.LEDGER_ID} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-6 py-4 text-sm font-medium text-gray-900">#{tx.LEDGER_ID}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500">{new Date(tx.TRANSACTION_DATE).toLocaleString()}</td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${tx.TRANSACTION_TYPE === 'Appointment' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
+                              {tx.TRANSACTION_TYPE}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-800">{tx.DOCTOR_NAME}</td>
+                          <td className="px-6 py-4 text-sm font-bold text-gray-900">৳{tx.TOTAL_AMOUNT}</td>
+                          <td className="px-6 py-4 text-sm text-blue-600 font-medium">৳{tx.ADMIN_AMOUNT}</td>
+                          <td className="px-6 py-4 text-sm text-violet-600 font-medium">৳{tx.DOCTOR_AMOUNT}</td>
+                        </tr>
+                      ))}
+                      {ledger.length === 0 && !dataLoading && <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-400 text-sm">No transactions found.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}

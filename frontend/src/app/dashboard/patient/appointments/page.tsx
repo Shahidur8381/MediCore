@@ -8,6 +8,7 @@ import { Calendar, ArrowLeft, Plus, X, Clock, User as UserIcon } from 'lucide-re
 import api from '@/lib/api';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
+import { DummySSLCommerz } from '@/components/DummySSLCommerz';
 
 export default function AppointmentsPage() {
   const { user, loading } = useAuth();
@@ -28,6 +29,8 @@ export default function AppointmentsPage() {
     Appointment_Time: ''
   });
   const [booking, setBooking] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState(0);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'Patient')) {
@@ -55,13 +58,22 @@ export default function AppointmentsPage() {
     }
   };
 
-  const handleBook = async (e: React.FormEvent) => {
+  const handleBook = (e: React.FormEvent) => {
     e.preventDefault();
+    const doc = doctors.find(d => d.DOCTOR_ID.toString() === formData.Doctor_ID.toString());
+    if (doc) {
+      setPaymentAmount(doc.CONSULTATION_FEE);
+      setShowPayment(true);
+      setIsModalOpen(false);
+    }
+  };
+
+  const processBooking = async () => {
     try {
+      setShowPayment(false);
       setBooking(true);
       await api.post('/api/appointments', formData);
       toast('Appointment booked successfully!', 'success');
-      setIsModalOpen(false);
       fetchData(); // Refresh list
     } catch (err: any) {
       toast(err.response?.data?.message || 'Failed to book appointment', 'error');
@@ -233,6 +245,15 @@ export default function AppointmentsPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {showPayment && (
+        <DummySSLCommerz 
+          amount={paymentAmount}
+          title="Doctor Consultation Fee"
+          onSuccess={processBooking}
+          onCancel={() => { setShowPayment(false); setIsModalOpen(true); }}
+        />
       )}
     </div>
   );

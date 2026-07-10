@@ -31,6 +31,7 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
 
   // Lab Form
   const [selectedTest, setSelectedTest] = useState('');
+  const [waiveCommission, setWaiveCommission] = useState(false);
   const [orderingLab, setOrderingLab] = useState(false);
 
   useEffect(() => {
@@ -90,10 +91,12 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
       setOrderingLab(true);
       await api.post('/api/lab/records', {
         Patient_ID: appointment.PATIENT_ID,
-        Test_ID: selectedTest
+        Test_ID: selectedTest,
+        waiveCommission
       });
       toast('Lab test ordered successfully', 'success');
       setSelectedTest('');
+      setWaiveCommission(false);
     } catch (err: any) {
       toast('Failed to order lab test', 'error');
     } finally {
@@ -205,6 +208,20 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
                   ))}
                 </select>
               </div>
+              
+              <div className="flex items-center gap-2 mt-2">
+                <input 
+                  type="checkbox" 
+                  id="waiveCommission" 
+                  checked={waiveCommission}
+                  onChange={(e) => setWaiveCommission(e.target.checked)}
+                  className="w-4 h-4 text-amber-600 bg-gray-100 border-gray-300 rounded focus:ring-amber-500"
+                />
+                <label htmlFor="waiveCommission" className="text-sm text-gray-700">
+                  Waive my 25% commission for this test (Discount for patient)
+                </label>
+              </div>
+
               <button 
                 type="submit"
                 disabled={orderingLab || !selectedTest}

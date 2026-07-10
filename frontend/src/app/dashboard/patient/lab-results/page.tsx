@@ -8,6 +8,7 @@ import { TestTubes, ArrowLeft, Calendar, FileCheck2, Clock } from 'lucide-react'
 import api from '@/lib/api';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
+import { DummySSLCommerz } from '@/components/DummySSLCommerz';
 
 export default function LabResultsPage() {
   const { user, loading } = useAuth();
@@ -16,6 +17,10 @@ export default function LabResultsPage() {
 
   const [labRecords, setLabRecords] = useState<any[]>([]);
   const [fetching, setFetching] = useState(true);
+
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState(0);
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'Patient')) {
@@ -33,6 +38,25 @@ export default function LabResultsPage() {
     } catch (err) {
       toast('Failed to fetch lab results', 'error');
     } finally {
+      setFetching(false);
+    }
+  };
+
+  const handlePayClick = (record: any) => {
+    setSelectedRecord(record);
+    setPaymentAmount(record.TEST_FEE);
+    setShowPayment(true);
+  };
+
+  const processPayment = async () => {
+    try {
+      setShowPayment(false);
+      setFetching(true);
+      await api.post(`/api/lab/records/${selectedRecord.RECORD_ID}/pay`);
+      toast('Payment successful!', 'success');
+      fetchData();
+    } catch (err: any) {
+      toast(err.response?.data?.message || 'Payment failed', 'error');
       setFetching(false);
     }
   };
@@ -79,13 +103,28 @@ export default function LabResultsPage() {
                       </div>
                     </div>
                     <div>
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                        record.STATUS === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-                        'bg-amber-50 text-amber-600 border border-amber-100'
-                      }`}>
-                        {record.STATUS === 'Completed' ? <FileCheck2 size={14} /> : <Clock size={14} />}
-                        {record.STATUS}
-                      </span>
+                      <div className="flex flex-col items-end gap-2">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                          record.STATUS === 'Completed' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                          'bg-amber-50 text-amber-600 border border-amber-100'
+                        }`}>
+                          {record.STATUS === 'Completed' ? <FileCheck2 size={14} /> : <Clock size={14} />}
+                          {record.STATUS}
+                        </span>
+                        
+                        {record.PAYMENT_STATUS === 'Pending' ? (
+                          <button 
+                            onClick={() => handlePayClick(record)}
+                            className="text-xs px-3 py-1 bg-gray-900 hover:bg-black text-white rounded-full font-bold shadow-sm transition-colors"
+                          >
+                            Pay ৳{record.TEST_FEE}
+                          </button>
+                        ) : (
+                          <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                            Paid
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -108,6 +147,15 @@ export default function LabResultsPage() {
           )}
         </div>
       </main>
+
+      {showPayment && (
+        <DummySSLCommerz 
+          amount={paymentAmount}
+          title={`Lab Test: ${selectedRecord?.TEST_NAME}`}
+          onSuccess={processPayment}
+          onCancel={() => setShowPayment(false)}
+        />
+      )}
     </div>
   );
 }
