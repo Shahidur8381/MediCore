@@ -22,4 +22,8 @@ router.post('/records', labController.orderLabTest);
 // @desc    Update lab test result
 router.put('/records/:id/result', labController.updateLabResult);
 
+// @route   POST /api/lab/records/:id/pay
+// @desc    Pay for a lab test (Dummy SSLCommerz callback)
+router.post('/records/:id/pay', labController.payLabTest);
+
 module.exports = router;

@@ -1,4 +1,5 @@
-const { executeQuery } = require('../config/db');
+const oracledb = require('oracledb');
+const { executeQuery, getConnection } = require('../config/db');
 
 // @route   GET /api/appointments
 // @desc    Get all appointments (Filtered by role)
@@ -32,10 +33,13 @@ exports.getAppointments = async (req, res) => {
     }
 };
 
+
+
 // @route   POST /api/appointments
 // @desc    Book a new appointment
 // @access  Private (Patient only)
 exports.createAppointment = async (req, res) => {
+    let connection;
     try {
         const { Doctor_ID, Appointment_Date, Appointment_Time } = req.body;
         const Patient_ID = req.user.patientId;
@@ -44,19 +48,55 @@ exports.createAppointment = async (req, res) => {
             return res.status(403).json({ message: 'Only patients can book appointments directly' });
         }
 
-        await executeQuery(
-            `INSERT INTO APPOINTMENT (Patient_ID, Doctor_ID, Appointment_Date, Appointment_Time)
-             VALUES (:1, :2, TO_DATE(:3, 'YYYY-MM-DD'), :4)`,
-            [Patient_ID, Doctor_ID, Appointment_Date, Appointment_Time]
+        connection = await getConnection();
+
+        // Get the doctor's consultation fee
+        const docResult = await connection.execute(
+            `SELECT Consultation_Fee FROM DOCTOR WHERE Doctor_ID = :1`,
+            [Doctor_ID],
+            { outFormat: oracledb.OUT_FORMAT_OBJECT }
         );
 
-        res.status(201).json({ message: 'Appointment booked successfully' });
+        if (docResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Doctor not found' });
+        }
+
+        const fee = docResult.rows[0].CONSULTATION_FEE;
+        const doctorAmount = fee * 0.8;
+        const adminAmount = fee * 0.2;
+
+        // Insert appointment and get the new ID
+        const aptResult = await connection.execute(
+            `INSERT INTO APPOINTMENT (Patient_ID, Doctor_ID, Appointment_Date, Appointment_Time)
+             VALUES (:1, :2, TO_DATE(:3, 'YYYY-MM-DD'), :4)
+             RETURNING Appointment_ID INTO :5`,
+            [Patient_ID, Doctor_ID, Appointment_Date, Appointment_Time, { type: oracledb.NUMBER, dir: oracledb.BIND_OUT }],
+            { autoCommit: false }
+        );
+
+        const appointmentId = aptResult.outBinds[0][0];
+
+        // Insert into financial ledger
+        await connection.execute(
+            `INSERT INTO FINANCIAL_LEDGER (Transaction_Type, Reference_ID, Patient_ID, Doctor_ID, Total_Amount, Doctor_Amount, Admin_Amount)
+             VALUES ('Appointment', :1, :2, :3, :4, :5, :6)`,
+            [appointmentId, Patient_ID, Doctor_ID, fee, doctorAmount, adminAmount],
+            { autoCommit: false }
+        );
+
+        await connection.commit();
+        res.status(201).json({ message: 'Appointment booked successfully and payment recorded' });
     } catch (err) {
+        if (connection) await connection.rollback();
         console.error(err.message);
         if (err.message.includes('ORA-20001')) {
             return res.status(400).json({ message: 'Doctor already has an appointment at this date and time.' });
         }
         res.status(500).send('Server error');
+    } finally {
+        if (connection) {
+            try { await connection.close(); } catch (e) {}
+        }
     }
 };
 

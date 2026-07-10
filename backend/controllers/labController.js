@@ -1,4 +1,5 @@
-const { executeQuery } = require('../config/db');
+const oracledb = require('oracledb');
+const { executeQuery, getConnection } = require('../config/db');
 
 // @route   GET /api/lab/tests
 // @desc    Get all available lab tests
@@ -45,6 +46,8 @@ exports.getLabRecords = async (req, res) => {
     }
 };
 
+
+
 // @route   POST /api/lab/records
 // @desc    Order a new lab test
 // @access  Private (Doctor only)
@@ -54,19 +57,89 @@ exports.orderLabTest = async (req, res) => {
             return res.status(403).json({ message: 'Only doctors can order lab tests' });
         }
 
-        const { Patient_ID, Test_ID } = req.body;
+        const { Patient_ID, Test_ID, waiveCommission } = req.body;
         const Doctor_ID = req.user.doctorId;
+        const waive = waiveCommission ? 'Y' : 'N';
 
         await executeQuery(
-            `INSERT INTO LAB_TEST_RECORD (Patient_ID, Doctor_ID, Test_ID)
-             VALUES (:1, :2, :3)`,
-            [Patient_ID, Doctor_ID, Test_ID]
+            `INSERT INTO LAB_TEST_RECORD (Patient_ID, Doctor_ID, Test_ID, Waive_Commission)
+             VALUES (:1, :2, :3, :4)`,
+            [Patient_ID, Doctor_ID, Test_ID, waive]
         );
 
         res.status(201).json({ message: 'Lab test ordered successfully' });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server error');
+    }
+};
+
+// @route   POST /api/lab/records/:id/pay
+// @desc    Pay for a lab test (Dummy SSLCommerz callback)
+// @access  Private (Patient only)
+exports.payLabTest = async (req, res) => {
+    let connection;
+    try {
+        const { id } = req.params;
+        if (req.user.role !== 'Patient') {
+            return res.status(403).json({ message: 'Only patients can pay for lab tests' });
+        }
+
+        connection = await getConnection();
+
+        // Get lab record details
+        const recResult = await connection.execute(
+            `SELECT r.Test_ID, r.Doctor_ID, r.Patient_ID, r.Waive_Commission, r.Payment_Status, t.Test_Fee 
+             FROM LAB_TEST_RECORD r
+             JOIN LAB_TEST t ON r.Test_ID = t.Test_ID
+             WHERE r.Record_ID = :1 AND r.Patient_ID = :2`,
+            [id, req.user.patientId],
+            { outFormat: oracledb.OUT_FORMAT_OBJECT }
+        );
+
+        if (recResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Lab test not found' });
+        }
+
+        const record = recResult.rows[0];
+        if (record.PAYMENT_STATUS === 'Paid') {
+            return res.status(400).json({ message: 'Lab test is already paid' });
+        }
+
+        const fee = record.TEST_FEE;
+        let doctorAmount = 0;
+        let adminAmount = fee;
+
+        if (record.WAIVE_COMMISSION === 'N') {
+            doctorAmount = fee * 0.25;
+            adminAmount = fee * 0.75;
+        }
+
+        // Update payment status
+        await connection.execute(
+            `UPDATE LAB_TEST_RECORD SET Payment_Status = 'Paid' WHERE Record_ID = :1`,
+            [id],
+            { autoCommit: false }
+        );
+
+        // Insert into financial ledger
+        await connection.execute(
+            `INSERT INTO FINANCIAL_LEDGER (Transaction_Type, Reference_ID, Patient_ID, Doctor_ID, Total_Amount, Doctor_Amount, Admin_Amount)
+             VALUES ('Lab Test', :1, :2, :3, :4, :5, :6)`,
+            [id, record.PATIENT_ID, record.DOCTOR_ID, fee, doctorAmount, adminAmount],
+            { autoCommit: false }
+        );
+
+        await connection.commit();
+        res.json({ message: 'Payment successful' });
+    } catch (err) {
+        if (connection) await connection.rollback();
+        console.error(err.message);
+        res.status(500).send('Server error');
+    } finally {
+        if (connection) {
+            try { await connection.close(); } catch(e) {}
+        }
     }
 };
 
