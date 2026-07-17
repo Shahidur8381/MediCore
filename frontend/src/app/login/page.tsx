@@ -30,6 +30,7 @@ export default function Login() {
       if (role === 'Admin') router.push('/dashboard/admin');
       else if (role === 'Doctor') router.push('/dashboard/doctor');
       else if (role === 'Patient') router.push('/dashboard/patient');
+      else if (role === 'Lab') router.push('/dashboard/lab');
       else router.push('/');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');

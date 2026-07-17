@@ -1,22 +1,32 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FullPageSpinner } from '@/components/LoadingSpinner';
+import api from '@/lib/api';
 import {
-  LogOut, Heart, Calendar, FileText, CreditCard, TestTubes,
-  Phone, Mail, MapPin, User, Droplets, AlertCircle, Clock, Shield
+  LogOut, Heart, Calendar, FileText, TestTubes,
+  Phone, Mail, MapPin, User, Droplets, AlertCircle, Shield
 } from 'lucide-react';
 
 export default function PatientDashboard() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
 
+  const [stats, setStats] = useState({ appointments: 0, labTests: 0, prescriptions: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
+
   useEffect(() => {
     if (!loading && (!user || user.role !== 'Patient')) {
       router.push('/login');
+    }
+    if (user?.role === 'Patient') {
+      api.get('/api/appointments/stats')
+        .then(r => setStats(r.data))
+        .catch(() => {})
+        .finally(() => setStatsLoading(false));
     }
   }, [user, loading]);
 
@@ -25,10 +35,9 @@ export default function PatientDashboard() {
   const profile = user.profile;
 
   const quickActions = [
-    { label: 'Book Appointment', description: 'Schedule a visit with a doctor', icon: Calendar, color: 'blue', note: 'Phase 3', href: '/dashboard/patient/appointments' },
-    { label: 'My Prescriptions', description: 'View your medical prescriptions', icon: FileText, color: 'violet', note: 'Phase 3', href: '/dashboard/patient/prescriptions' },
-    { label: 'Lab Results', description: 'Check your test results', icon: TestTubes, color: 'amber', note: 'Phase 3', href: '/dashboard/patient/lab-results' },
-    { label: 'Billing', description: 'View and pay your bills', icon: CreditCard, color: 'emerald', note: 'Phase 5', href: '#' },
+    { label: 'Book Appointment', description: 'Schedule a visit with a doctor', icon: Calendar, color: 'blue', stat: stats.appointments, statLabel: 'total', href: '/dashboard/patient/appointments' },
+    { label: 'My Prescriptions', description: 'View your medical prescriptions', icon: FileText, color: 'violet', stat: stats.prescriptions, statLabel: 'total', href: '/dashboard/patient/prescriptions' },
+    { label: 'Lab Results', description: 'Check your test results & pay', icon: TestTubes, color: 'amber', stat: stats.labTests, statLabel: 'total', href: '/dashboard/patient/lab-results' },
   ];
 
   return (
@@ -74,14 +83,16 @@ export default function PatientDashboard() {
       {/* Content */}
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 -mt-6 pb-12">
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 stagger-children">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 stagger-children">
           {quickActions.map((action) => (
             <Link href={action.href} key={action.label} className="group bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all duration-300 cursor-pointer relative overflow-hidden block">
               <div className="flex items-center justify-between mb-3">
                 <div className={`w-11 h-11 rounded-xl bg-${action.color}-50 flex items-center justify-center`}>
                   <action.icon size={20} className={`text-${action.color}-600`} />
                 </div>
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-300 bg-gray-50 px-2 py-0.5 rounded-full">{action.note}</span>
+                <span className={`text-2xl font-bold text-${action.color}-600`}>
+                  {statsLoading ? '—' : action.stat}
+                </span>
               </div>
               <h3 className="text-sm font-bold text-gray-900">{action.label}</h3>
               <p className="text-xs text-gray-500 mt-0.5">{action.description}</p>

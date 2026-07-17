@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { FullPageSpinner } from '@/components/LoadingSpinner';
-import { Calendar, ArrowLeft, Plus, X, Clock, User as UserIcon } from 'lucide-react';
+import { Calendar, ArrowLeft, Plus, X, Hash, User as UserIcon, CheckCircle2 } from 'lucide-react';
 import api from '@/lib/api';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
@@ -25,8 +25,7 @@ export default function AppointmentsPage() {
   const [selectedDept, setSelectedDept] = useState('');
   const [formData, setFormData] = useState({
     Doctor_ID: '',
-    Appointment_Date: '',
-    Appointment_Time: ''
+    Appointment_Date: ''
   });
   const [booking, setBooking] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
@@ -72,9 +71,10 @@ export default function AppointmentsPage() {
     try {
       setShowPayment(false);
       setBooking(true);
-      await api.post('/api/appointments', formData);
-      toast('Appointment booked successfully!', 'success');
-      fetchData(); // Refresh list
+      const res = await api.post('/api/appointments', formData);
+      toast(`Appointment booked! You are queue #${res.data.queueNumber}`, 'success');
+      setFormData({ Doctor_ID: '', Appointment_Date: '' });
+      fetchData();
     } catch (err: any) {
       toast(err.response?.data?.message || 'Failed to book appointment', 'error');
     } finally {
@@ -84,15 +84,15 @@ export default function AppointmentsPage() {
 
   if (loading || !user || fetching) return <FullPageSpinner />;
 
-  // Filter doctors based on selected department
   const filteredDoctors = doctors.filter(d => !selectedDept || d.DEPARTMENT_ID === parseInt(selectedDept));
 
-  // Time slots for the dropdown (9 AM to 5 PM)
-  const timeSlots = [];
-  for (let i = 9; i <= 17; i++) {
-    timeSlots.push(`${i.toString().padStart(2, '0')}:00`);
-    timeSlots.push(`${i.toString().padStart(2, '0')}:30`);
-  }
+  const statusColors: Record<string, string> = {
+    Pending: 'bg-amber-50 text-amber-600 border-amber-100',
+    Confirmed: 'bg-blue-50 text-blue-600 border-blue-100',
+    Completed: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    Cancelled: 'bg-red-50 text-red-500 border-red-100',
+    Waiting: 'bg-purple-50 text-purple-600 border-purple-100',
+  };
 
   return (
     <div className="min-h-screen bg-gray-50/80">
@@ -120,36 +120,35 @@ export default function AppointmentsPage() {
           {appointments.length === 0 ? (
             <div className="p-12 text-center text-gray-500">
               <Calendar size={48} className="mx-auto mb-4 text-gray-300" />
-              <p>You have no appointments scheduled.</p>
+              <p className="font-medium">You have no appointments scheduled.</p>
+              <p className="text-sm text-gray-400 mt-1">Click "Book New" to schedule one.</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
               {appointments.map((apt) => (
-                <div key={apt.APPOINTMENT_ID} className="p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                <div key={apt.APPOINTMENT_ID} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-blue-50 flex flex-col items-center justify-center text-blue-600 border border-blue-100">
-                      <span className="text-xs font-bold uppercase">{new Date(apt.APPOINTMENT_DATE).toLocaleString('default', { month: 'short' })}</span>
-                      <span className="text-lg font-bold leading-none">{new Date(apt.APPOINTMENT_DATE).getDate()}</span>
+                    {/* Date badge */}
+                    <div className="w-14 h-14 rounded-xl bg-blue-50 flex flex-col items-center justify-center text-blue-600 border border-blue-100 shrink-0">
+                      <span className="text-[10px] font-bold uppercase leading-none">
+                        {new Date(apt.APPOINTMENT_DATE).toLocaleString('default', { month: 'short' })}
+                      </span>
+                      <span className="text-xl font-bold leading-tight">
+                        {new Date(apt.APPOINTMENT_DATE).getDate()}
+                      </span>
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">Dr. {apt.DOCTOR_NAME}</h3>
                       <p className="text-sm text-gray-500">{apt.DEPARTMENT_NAME}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900 flex items-center gap-1.5 justify-end">
-                        <Clock size={14} className="text-gray-400" /> {apt.APPOINTMENT_TIME}
+                      <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                        <Hash size={11} /> Queue #{apt.QUEUE_NUMBER}
                       </p>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold mt-1 ${
-                        apt.STATUS === 'Pending' ? 'bg-amber-50 text-amber-600' :
-                        apt.STATUS === 'Completed' ? 'bg-emerald-50 text-emerald-600' :
-                        'bg-blue-50 text-blue-600'
-                      }`}>
-                        {apt.STATUS}
-                      </span>
                     </div>
                   </div>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${statusColors[apt.STATUS] || 'bg-gray-50 text-gray-500 border-gray-100'}`}>
+                    {apt.STATUS === 'Completed' && <CheckCircle2 size={12} className="mr-1" />}
+                    {apt.STATUS}
+                  </span>
                 </div>
               ))}
             </div>
@@ -193,38 +192,26 @@ export default function AppointmentsPage() {
                 >
                   <option value="">Select Doctor</option>
                   {filteredDoctors.map(d => (
-                    <option key={d.DOCTOR_ID} value={d.DOCTOR_ID}>Dr. {d.NAME} - ৳{d.CONSULTATION_FEE}</option>
+                    <option key={d.DOCTOR_ID} value={d.DOCTOR_ID}>Dr. {d.NAME} — ৳{d.CONSULTATION_FEE}</option>
                   ))}
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
-                  <input 
-                    type="date"
-                    required
-                    min={new Date().toISOString().split('T')[0]} // Cannot book past dates
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
-                    value={formData.Appointment_Date}
-                    onChange={(e) => setFormData({...formData, Appointment_Date: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Time *</label>
-                  <select 
-                    required
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
-                    value={formData.Appointment_Time}
-                    onChange={(e) => setFormData({...formData, Appointment_Time: e.target.value})}
-                  >
-                    <option value="">Select Time</option>
-                    {timeSlots.map(time => (
-                      <option key={time} value={time}>{time}</option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                <input 
+                  type="date"
+                  required
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
+                  value={formData.Appointment_Date}
+                  onChange={(e) => setFormData({...formData, Appointment_Date: e.target.value})}
+                />
               </div>
+
+              <p className="text-xs text-gray-400 flex items-center gap-1">
+                <Hash size={11} /> You will be assigned a queue number automatically.
+              </p>
 
               <div className="pt-4 mt-2 border-t border-gray-100 flex gap-3">
                 <button 
@@ -239,7 +226,7 @@ export default function AppointmentsPage() {
                   disabled={booking}
                   className="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-70"
                 >
-                  {booking ? 'Booking...' : 'Confirm Book'}
+                  {booking ? 'Processing...' : 'Continue to Payment'}
                 </button>
               </div>
             </form>

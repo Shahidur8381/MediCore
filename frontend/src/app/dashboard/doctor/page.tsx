@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FullPageSpinner } from '@/components/LoadingSpinner';
+import api from '@/lib/api';
 import {
   LogOut, Heart, Stethoscope, Calendar, FileText, ClipboardList,
   Phone, Mail, Award, Building2, Clock, User
@@ -14,9 +15,18 @@ export default function DoctorDashboard() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
 
+  const [stats, setStats] = useState({ todayAppointments: 0, totalPrescriptions: 0, totalLabOrders: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
+
   useEffect(() => {
     if (!loading && (!user || user.role !== 'Doctor')) {
       router.push('/login');
+    }
+    if (user?.role === 'Doctor') {
+      api.get('/api/appointments/stats')
+        .then(r => setStats(r.data))
+        .catch(() => {})
+        .finally(() => setStatsLoading(false));
     }
   }, [user, loading]);
 
@@ -25,9 +35,9 @@ export default function DoctorDashboard() {
   const profile = user.profile;
 
   const quickStats = [
-    { label: 'Appointments Today', value: '—', icon: Calendar, color: 'blue', note: 'Phase 3', href: '/dashboard/doctor/appointments' },
-    { label: 'Prescriptions', value: '—', icon: FileText, color: 'violet', note: 'Phase 3', href: '#' },
-    { label: 'Lab Orders', value: '—', icon: ClipboardList, color: 'emerald', note: 'Phase 3', href: '#' },
+    { label: "Today's Appointments", value: stats.todayAppointments, icon: Calendar, color: 'blue', href: '/dashboard/doctor/appointments' },
+    { label: 'Prescriptions Written', value: stats.totalPrescriptions, icon: FileText, color: 'violet', href: '/dashboard/doctor/appointments' },
+    { label: 'Lab Tests Ordered', value: stats.totalLabOrders, icon: ClipboardList, color: 'amber', href: '/dashboard/doctor/appointments' },
   ];
 
   return (
@@ -78,9 +88,10 @@ export default function DoctorDashboard() {
                 <div className={`w-11 h-11 rounded-xl bg-${stat.color}-50 flex items-center justify-center`}>
                   <stat.icon size={20} className={`text-${stat.color}-600`} />
                 </div>
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-300 bg-gray-50 px-2 py-0.5 rounded-full">{stat.note}</span>
+                <span className={`text-3xl font-bold text-${stat.color}-600`}>
+                  {statsLoading ? '—' : stat.value}
+                </span>
               </div>
-              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
               <p className="text-sm text-gray-500 mt-0.5">{stat.label}</p>
             </Link>
           ))}
