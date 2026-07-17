@@ -65,24 +65,4 @@ EXCEPTION
 END;
 /
 
--- 3. Trigger to validate appointment slot
-CREATE OR REPLACE TRIGGER trg_validate_appointment
-BEFORE INSERT OR UPDATE ON APPOINTMENT
-FOR EACH ROW
-DECLARE
-    v_count NUMBER;
-BEGIN
-    SELECT COUNT(*)
-    INTO v_count
-    FROM APPOINTMENT
-    WHERE Doctor_ID = :NEW.Doctor_ID
-      AND Appointment_Date = :NEW.Appointment_Date
-      AND Appointment_Time = :NEW.Appointment_Time
-      AND Status IN ('Pending', 'Confirmed')
-      AND Appointment_ID != NVL(:NEW.Appointment_ID, -1);
-      
-    IF v_count > 0 THEN
-        RAISE_APPLICATION_ERROR(-20001, 'Doctor already has an appointment at this date and time.');
-    END IF;
-END;
-/
+
