@@ -107,7 +107,7 @@ export default function DoctorAppointmentsPage() {
                       </button>
                     )}
                     
-                    {(apt.STATUS === 'Pending' || apt.STATUS === 'Confirmed') && (
+                    {apt.STATUS === 'Confirmed' && (
                       <Link 
                         href={`/dashboard/doctor/consultation/${apt.APPOINTMENT_ID}`}
                         className="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2"

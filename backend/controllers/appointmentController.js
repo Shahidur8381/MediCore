@@ -61,6 +61,18 @@ exports.createAppointment = async (req, res) => {
             return res.status(404).json({ message: 'Doctor not found' });
         }
 
+        // Check for existing appointment at the same date and time
+        const existingApt = await connection.execute(
+            `SELECT Appointment_ID FROM APPOINTMENT 
+             WHERE Doctor_ID = :1 AND Appointment_Date = TO_DATE(:2, 'YYYY-MM-DD') AND Appointment_Time = :3 AND Status != 'Cancelled'`,
+            [Doctor_ID, Appointment_Date, Appointment_Time],
+            { outFormat: oracledb.OUT_FORMAT_OBJECT }
+        );
+
+        if (existingApt.rows.length > 0) {
+            return res.status(400).json({ message: 'Doctor already has an appointment at this date and time.' });
+        }
+
         const fee = docResult.rows[0].CONSULTATION_FEE;
         const doctorAmount = fee * 0.8;
         const adminAmount = fee * 0.2;
@@ -114,7 +126,7 @@ exports.updateAppointmentStatus = async (req, res) => {
 
         await executeQuery(
             `UPDATE APPOINTMENT SET Status = :1 WHERE Appointment_ID = :2`,
-            [status, id]
+            [status, parseInt(id, 10)]
         );
 
         res.json({ message: 'Appointment status updated' });
