@@ -195,6 +195,10 @@ exports.getMe = async (req, res) => {
             return res.json({ id: req.user.id, role: req.user.role, username: req.user.username, profile: result.rows[0] });
         }
 
+        if (req.user.role === 'Lab') {
+            return res.json({ id: req.user.id, role: req.user.role, username: req.user.username });
+        }
+
         res.status(404).json({ message: 'Profile not found' });
     } catch (err) {
         console.error(err.message);

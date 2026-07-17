@@ -6,7 +6,7 @@ const { executeQuery, getConnection } = require('../config/db');
 // @access  Private
 exports.getAvailableTests = async (req, res) => {
     try {
-        const result = await executeQuery(`SELECT * FROM LAB_TEST WHERE Status = 'Available'`);
+        const result = await executeQuery(`SELECT * FROM LAB_TEST WHERE Status = 'Available' ORDER BY Test_Name`);
         res.json(result.rows);
     } catch (err) {
         console.error(err.message);
@@ -27,13 +27,21 @@ exports.getLabRecords = async (req, res) => {
             JOIN PATIENT p ON r.Patient_ID = p.Patient_ID
         `;
         let params = [];
+        let whereClauses = [];
 
         if (req.user.role === 'Patient') {
-            query += ' WHERE r.Patient_ID = :1';
+            whereClauses.push('r.Patient_ID = :1');
             params.push(req.user.patientId);
         } else if (req.user.role === 'Doctor') {
-            query += ' WHERE r.Doctor_ID = :1';
+            whereClauses.push('r.Doctor_ID = :1');
             params.push(req.user.doctorId);
+        } else if (req.user.role === 'Lab') {
+            // Lab sees all records that have been paid for (ready for processing)
+            whereClauses.push("r.Payment_Status = 'Paid'");
+        }
+
+        if (whereClauses.length > 0) {
+            query += ' WHERE ' + whereClauses.join(' AND ');
         }
 
         query += ' ORDER BY r.Order_Date DESC';
@@ -46,10 +54,8 @@ exports.getLabRecords = async (req, res) => {
     }
 };
 
-
-
 // @route   POST /api/lab/records
-// @desc    Order a new lab test
+// @desc    Order a new lab test (multiple can be ordered)
 // @access  Private (Doctor only)
 exports.orderLabTest = async (req, res) => {
     try {
@@ -93,7 +99,7 @@ exports.payLabTest = async (req, res) => {
              FROM LAB_TEST_RECORD r
              JOIN LAB_TEST t ON r.Test_ID = t.Test_ID
              WHERE r.Record_ID = :1 AND r.Patient_ID = :2`,
-            [id, req.user.patientId],
+            [parseInt(id, 10), req.user.patientId],
             { outFormat: oracledb.OUT_FORMAT_OBJECT }
         );
 
@@ -115,10 +121,10 @@ exports.payLabTest = async (req, res) => {
             adminAmount = fee * 0.75;
         }
 
-        // Update payment status
+        // Update payment status → moves to "Awaiting Result" for lab to process
         await connection.execute(
-            `UPDATE LAB_TEST_RECORD SET Payment_Status = 'Paid' WHERE Record_ID = :1`,
-            [id],
+            `UPDATE LAB_TEST_RECORD SET Payment_Status = 'Paid', Status = 'Awaiting Result' WHERE Record_ID = :1`,
+            [parseInt(id, 10)],
             { autoCommit: false }
         );
 
@@ -126,25 +132,55 @@ exports.payLabTest = async (req, res) => {
         await connection.execute(
             `INSERT INTO FINANCIAL_LEDGER (Transaction_Type, Reference_ID, Patient_ID, Doctor_ID, Total_Amount, Doctor_Amount, Admin_Amount)
              VALUES ('Lab Test', :1, :2, :3, :4, :5, :6)`,
-            [id, record.PATIENT_ID, record.DOCTOR_ID, fee, doctorAmount, adminAmount],
+            [parseInt(id, 10), record.PATIENT_ID, record.DOCTOR_ID, fee, doctorAmount, adminAmount],
             { autoCommit: false }
         );
 
         await connection.commit();
-        res.json({ message: 'Payment successful' });
+        res.json({ message: 'Payment successful. Test sent to lab.' });
     } catch (err) {
         if (connection) await connection.rollback();
         console.error(err.message);
         res.status(500).send('Server error');
     } finally {
         if (connection) {
-            try { await connection.close(); } catch(e) {}
+            try { await connection.close(); } catch (e) {}
         }
     }
 };
 
+// @route   PUT /api/lab/records/:id/complete
+// @desc    Complete a lab test and submit report (Lab role only)
+// @access  Private (Lab only)
+exports.completeLabTest = async (req, res) => {
+    try {
+        if (req.user.role !== 'Lab') {
+            return res.status(403).json({ message: 'Only lab technicians can complete lab tests' });
+        }
+
+        const { id } = req.params;
+        const { Result_Details } = req.body;
+
+        if (!Result_Details || !Result_Details.trim()) {
+            return res.status(400).json({ message: 'Result details are required' });
+        }
+
+        await executeQuery(
+            `UPDATE LAB_TEST_RECORD 
+             SET Result_Details = :1, Status = 'Completed', Report_Date = SYSDATE
+             WHERE Record_ID = :2 AND Payment_Status = 'Paid'`,
+            [Result_Details, parseInt(id, 10)]
+        );
+
+        res.json({ message: 'Lab report submitted successfully' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+};
+
 // @route   PUT /api/lab/records/:id/result
-// @desc    Update lab test result
+// @desc    Update lab test result (legacy - kept for compatibility)
 // @access  Private (Admin, Doctor)
 exports.updateLabResult = async (req, res) => {
     try {
@@ -159,7 +195,7 @@ exports.updateLabResult = async (req, res) => {
             `UPDATE LAB_TEST_RECORD 
              SET Result_Details = :1, Status = :2, Report_Date = SYSDATE
              WHERE Record_ID = :3`,
-            [Result_Details, Status, id]
+            [Result_Details, Status, parseInt(id, 10)]
         );
 
         res.json({ message: 'Lab result updated' });

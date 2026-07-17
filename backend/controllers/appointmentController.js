@@ -7,7 +7,9 @@ const { executeQuery, getConnection } = require('../config/db');
 exports.getAppointments = async (req, res) => {
     try {
         let query = `
-            SELECT a.*, p.Name as Patient_Name, d.Name as Doctor_Name, dept.Department_Name
+            SELECT a.Appointment_ID, a.Patient_ID, a.Doctor_ID, a.Appointment_Date, 
+                   a.Queue_Number, a.Booking_Date, a.Status,
+                   p.Name as Patient_Name, d.Name as Doctor_Name, dept.Department_Name
             FROM APPOINTMENT a
             JOIN PATIENT p ON a.Patient_ID = p.Patient_ID
             JOIN DOCTOR d ON a.Doctor_ID = d.Doctor_ID
@@ -23,7 +25,7 @@ exports.getAppointments = async (req, res) => {
             params.push(req.user.doctorId);
         }
 
-        query += ' ORDER BY a.Appointment_Date DESC, a.Appointment_Time DESC';
+        query += ' ORDER BY a.Appointment_Date DESC, a.Queue_Number ASC';
 
         const result = await executeQuery(query, params);
         res.json(result.rows);
@@ -33,15 +35,53 @@ exports.getAppointments = async (req, res) => {
     }
 };
 
-
+// @route   GET /api/appointments/stats
+// @desc    Get appointment stats for current user
+// @access  Private
+exports.getStats = async (req, res) => {
+    try {
+        if (req.user.role === 'Patient') {
+            const [aptRes, labRes, rxRes] = await Promise.all([
+                executeQuery('SELECT COUNT(*) AS CNT FROM APPOINTMENT WHERE Patient_ID = :1', [req.user.patientId]),
+                executeQuery('SELECT COUNT(*) AS CNT FROM LAB_TEST_RECORD WHERE Patient_ID = :1', [req.user.patientId]),
+                executeQuery('SELECT COUNT(*) AS CNT FROM PRESCRIPTION WHERE Patient_ID = :1', [req.user.patientId]),
+            ]);
+            return res.json({
+                appointments: aptRes.rows[0].CNT,
+                labTests: labRes.rows[0].CNT,
+                prescriptions: rxRes.rows[0].CNT,
+            });
+        }
+        if (req.user.role === 'Doctor') {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const [todayRes, totalRxRes, totalLabRes] = await Promise.all([
+                executeQuery(
+                    `SELECT COUNT(*) AS CNT FROM APPOINTMENT WHERE Doctor_ID = :1 AND TRUNC(Appointment_Date) = TO_DATE(:2, 'YYYY-MM-DD') AND Status != 'Cancelled'`,
+                    [req.user.doctorId, todayStr]
+                ),
+                executeQuery('SELECT COUNT(*) AS CNT FROM PRESCRIPTION WHERE Doctor_ID = :1', [req.user.doctorId]),
+                executeQuery('SELECT COUNT(*) AS CNT FROM LAB_TEST_RECORD WHERE Doctor_ID = :1', [req.user.doctorId]),
+            ]);
+            return res.json({
+                todayAppointments: todayRes.rows[0].CNT,
+                totalPrescriptions: totalRxRes.rows[0].CNT,
+                totalLabOrders: totalLabRes.rows[0].CNT,
+            });
+        }
+        res.json({});
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+};
 
 // @route   POST /api/appointments
-// @desc    Book a new appointment
+// @desc    Book a new appointment (queue-based)
 // @access  Private (Patient only)
 exports.createAppointment = async (req, res) => {
     let connection;
     try {
-        const { Doctor_ID, Appointment_Date, Appointment_Time } = req.body;
+        const { Doctor_ID, Appointment_Date } = req.body;
         const Patient_ID = req.user.patientId;
 
         if (req.user.role !== 'Patient') {
@@ -61,28 +101,34 @@ exports.createAppointment = async (req, res) => {
             return res.status(404).json({ message: 'Doctor not found' });
         }
 
-        // Check for existing appointment at the same date and time
-        const existingApt = await connection.execute(
-            `SELECT Appointment_ID FROM APPOINTMENT 
-             WHERE Doctor_ID = :1 AND Appointment_Date = TO_DATE(:2, 'YYYY-MM-DD') AND Appointment_Time = :3 AND Status != 'Cancelled'`,
-            [Doctor_ID, Appointment_Date, Appointment_Time],
+        // Check patient hasn't already booked this doctor on same date
+        const dupeCheck = await connection.execute(
+            `SELECT Appointment_ID FROM APPOINTMENT WHERE Doctor_ID = :1 AND Appointment_Date = TO_DATE(:2, 'YYYY-MM-DD') AND Patient_ID = :3 AND Status != 'Cancelled'`,
+            [Doctor_ID, Appointment_Date, Patient_ID],
             { outFormat: oracledb.OUT_FORMAT_OBJECT }
         );
-
-        if (existingApt.rows.length > 0) {
-            return res.status(400).json({ message: 'Doctor already has an appointment at this date and time.' });
+        if (dupeCheck.rows.length > 0) {
+            return res.status(400).json({ message: 'You already have an appointment with this doctor on this date.' });
         }
+
+        // Calculate queue number
+        const queueResult = await connection.execute(
+            `SELECT NVL(MAX(Queue_Number), 0) + 1 AS NEXT_QUEUE FROM APPOINTMENT WHERE Doctor_ID = :1 AND Appointment_Date = TO_DATE(:2, 'YYYY-MM-DD') AND Status != 'Cancelled'`,
+            [Doctor_ID, Appointment_Date],
+            { outFormat: oracledb.OUT_FORMAT_OBJECT }
+        );
+        const queueNumber = queueResult.rows[0].NEXT_QUEUE;
 
         const fee = docResult.rows[0].CONSULTATION_FEE;
         const doctorAmount = fee * 0.8;
         const adminAmount = fee * 0.2;
 
-        // Insert appointment and get the new ID
+        // Insert appointment
         const aptResult = await connection.execute(
-            `INSERT INTO APPOINTMENT (Patient_ID, Doctor_ID, Appointment_Date, Appointment_Time)
+            `INSERT INTO APPOINTMENT (Patient_ID, Doctor_ID, Appointment_Date, Queue_Number)
              VALUES (:1, :2, TO_DATE(:3, 'YYYY-MM-DD'), :4)
              RETURNING Appointment_ID INTO :5`,
-            [Patient_ID, Doctor_ID, Appointment_Date, Appointment_Time, { type: oracledb.NUMBER, dir: oracledb.BIND_OUT }],
+            [Patient_ID, Doctor_ID, Appointment_Date, queueNumber, { type: oracledb.NUMBER, dir: oracledb.BIND_OUT }],
             { autoCommit: false }
         );
 
@@ -97,13 +143,10 @@ exports.createAppointment = async (req, res) => {
         );
 
         await connection.commit();
-        res.status(201).json({ message: 'Appointment booked successfully and payment recorded' });
+        res.status(201).json({ message: 'Appointment booked successfully', queueNumber });
     } catch (err) {
         if (connection) await connection.rollback();
         console.error(err.message);
-        if (err.message.includes('ORA-20001')) {
-            return res.status(400).json({ message: 'Doctor already has an appointment at this date and time.' });
-        }
         res.status(500).send('Server error');
     } finally {
         if (connection) {

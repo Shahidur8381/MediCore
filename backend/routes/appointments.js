@@ -6,6 +6,9 @@ const appointmentController = require('../controllers/appointmentController');
 // All routes require authentication
 router.use(authMiddleware);
 
+// @route   GET /api/appointments/stats
+router.get('/stats', appointmentController.getStats);
+
 // @route   GET /api/appointments
 // @desc    Get all appointments (Filtered by role)
 router.get('/', appointmentController.getAppointments);
@@ -17,5 +20,4 @@ router.post('/', appointmentController.createAppointment);
 // @route   PUT /api/appointments/:id/status
 // @desc    Update appointment status
 router.put('/:id/status', appointmentController.updateAppointmentStatus);
-
 module.exports = router;

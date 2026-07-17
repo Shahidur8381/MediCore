@@ -18,6 +18,10 @@ router.get('/records', labController.getLabRecords);
 // @desc    Order a new lab test
 router.post('/records', labController.orderLabTest);
 
+// @route   PUT /api/lab/records/:id/complete
+// @desc    Complete a lab test and submit report (Lab role)
+router.put('/records/:id/complete', labController.completeLabTest);
+
 // @route   PUT /api/lab/records/:id/result
 // @desc    Update lab test result
 router.put('/records/:id/result', labController.updateLabResult);
