@@ -42,6 +42,7 @@ exports.getLedger = async (req, res) => {
                 f.Total_Amount,
                 f.Doctor_Amount,
                 f.Admin_Amount,
+                f.Is_Cleared,
                 f.Transaction_Date,
                 p.Name as Patient_Name,
                 d.Name as Doctor_Name
