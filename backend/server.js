@@ -45,6 +45,7 @@ app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/prescriptions', require('./routes/prescriptions'));
 app.use('/api/lab', require('./routes/lab'));
 app.use('/api/financial', require('./routes/financial'));
+app.use('/api/finance', require('./routes/finance'));
 
 // Global error handler
 app.use((err, req, res, next) => {

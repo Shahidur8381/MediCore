@@ -8,34 +8,60 @@ import { FullPageSpinner } from '@/components/LoadingSpinner';
 import api from '@/lib/api';
 import {
   LogOut, Heart, Stethoscope, Calendar, FileText, ClipboardList,
-  Phone, Mail, Award, Building2, Clock, User
+  Phone, Mail, Award, Building2, Clock, User, Wallet, Banknote
 } from 'lucide-react';
 
 export default function DoctorDashboard() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
-
-  const [stats, setStats] = useState({ todayAppointments: 0, totalPrescriptions: 0, totalLabOrders: 0 });
+  const [profile, setProfile] = useState<any>(null);
+  const [stats, setStats] = useState({ today: 0, pending: 0, total: 0 });
+  const [financeStats, setFinanceStats] = useState({ available: 0, pending: 0, cleared: 0, total: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'Doctor')) {
       router.push('/login');
-    }
-    if (user?.role === 'Doctor') {
-      api.get('/api/appointments/stats')
-        .then(r => setStats(r.data))
-        .catch(() => {})
-        .finally(() => setStatsLoading(false));
+    } else if (user) {
+      fetchData();
     }
   }, [user, loading]);
 
+  const fetchData = async () => {
+    try {
+      setStatsLoading(true);
+      const [profileRes, dashStatsRes, financeRes] = await Promise.all([
+        api.get('/api/doctors/profile'),
+        api.get('/api/appointments/doctor/stats'),
+        api.get('/api/finance/doctor-stats').catch(() => ({ data: { available: 0, pending: 0, cleared: 0, total: 0 } }))
+      ]);
+      setProfile(profileRes.data);
+      setStats(dashStatsRes.data);
+      setFinanceStats(financeRes.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    try {
+      setWithdrawing(true);
+      await api.post('/api/finance/withdraw');
+      // toast('Withdrawal requested successfully', 'success');
+      fetchData();
+    } catch (err: any) {
+      // toast(err.response?.data?.message || 'Failed to request withdrawal', 'error');
+    } finally {
+      setWithdrawing(false);
+    }
+  };
+
   if (loading || !user) return <FullPageSpinner />;
 
-  const profile = user.profile;
-
   const quickStats = [
-    { label: "Today's Appointments", value: stats.todayAppointments, icon: Calendar, color: 'blue', href: '/dashboard/doctor/appointments' },
     { label: 'Prescriptions Written', value: stats.totalPrescriptions, icon: FileText, color: 'violet', href: '/dashboard/doctor/appointments' },
     { label: 'Lab Tests Ordered', value: stats.totalLabOrders, icon: ClipboardList, color: 'amber', href: '/dashboard/doctor/appointments' },
   ];
@@ -124,6 +150,43 @@ export default function DoctorDashboard() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Finance Card */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-fade-in-up mt-8">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <Wallet size={20} className="text-emerald-500" /> Earnings & Withdrawals
+            </h2>
+            <button 
+              onClick={handleWithdraw}
+              disabled={withdrawing || financeStats.available === 0}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2 shadow-sm"
+            >
+              <Banknote size={16} />
+              {withdrawing ? 'Requesting...' : 'Request Withdrawal'}
+            </button>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Total Earned</p>
+                <p className="text-2xl font-bold text-gray-900">৳{financeStats.total}</p>
+              </div>
+              <div className="bg-emerald-50/50 rounded-xl p-4 border border-emerald-100">
+                <p className="text-xs font-medium text-emerald-600/70 uppercase tracking-wider mb-1">Available to Withdraw</p>
+                <p className="text-2xl font-bold text-emerald-600">৳{financeStats.available}</p>
+              </div>
+              <div className="bg-amber-50/50 rounded-xl p-4 border border-amber-100">
+                <p className="text-xs font-medium text-amber-600/70 uppercase tracking-wider mb-1">Pending Clearance</p>
+                <p className="text-2xl font-bold text-amber-600">৳{financeStats.pending}</p>
+              </div>
+              <div className="bg-blue-50/50 rounded-xl p-4 border border-blue-100">
+                <p className="text-xs font-medium text-blue-600/70 uppercase tracking-wider mb-1">Total Cleared (Paid)</p>
+                <p className="text-2xl font-bold text-blue-600">৳{financeStats.cleared}</p>
+              </div>
             </div>
           </div>
         </div>
