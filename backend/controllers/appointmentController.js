@@ -53,11 +53,10 @@ exports.getStats = async (req, res) => {
             });
         }
         if (req.user.role === 'Doctor') {
-            const todayStr = new Date().toISOString().split('T')[0];
             const [todayRes, totalRxRes, totalLabRes] = await Promise.all([
                 executeQuery(
-                    `SELECT COUNT(*) AS CNT FROM APPOINTMENT WHERE Doctor_ID = :1 AND TRUNC(Appointment_Date) = TO_DATE(:2, 'YYYY-MM-DD') AND Status != 'Cancelled'`,
-                    [req.user.doctorId, todayStr]
+                    `SELECT COUNT(*) AS CNT FROM APPOINTMENT WHERE Doctor_ID = :1 AND TRUNC(Appointment_Date) = TRUNC(SYSDATE) AND Status != 'Cancelled'`,
+                    [req.user.doctorId]
                 ),
                 executeQuery('SELECT COUNT(*) AS CNT FROM PRESCRIPTION WHERE Doctor_ID = :1', [req.user.doctorId]),
                 executeQuery('SELECT COUNT(*) AS CNT FROM LAB_TEST_RECORD WHERE Doctor_ID = :1', [req.user.doctorId]),
