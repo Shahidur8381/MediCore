@@ -123,10 +123,10 @@ exports.createAppointment = async (req, res) => {
         const doctorAmount = Math.ceil(fee * 0.8);
         const adminAmount = fee - doctorAmount; // Ensure exact match
 
-        // Insert appointment (appointment_time defaults to '00:00' as the app is queue/date based)
+        // Insert appointment
         const aptResult = await connection.execute(
-            `INSERT INTO APPOINTMENT (Patient_ID, Doctor_ID, Appointment_Date, Appointment_Time, Queue_Number)
-             VALUES (:1, :2, TO_DATE(:3, 'YYYY-MM-DD'), '00:00', :4)
+            `INSERT INTO APPOINTMENT (Patient_ID, Doctor_ID, Appointment_Date, Queue_Number)
+             VALUES (:1, :2, TO_DATE(:3, 'YYYY-MM-DD'), :4)
              RETURNING Appointment_ID INTO :5`,
             [Patient_ID, Doctor_ID, Appointment_Date, queueNumber, { type: oracledb.NUMBER, dir: oracledb.BIND_OUT }],
             { autoCommit: false }
