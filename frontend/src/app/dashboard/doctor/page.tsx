@@ -31,12 +31,11 @@ export default function DoctorDashboard() {
   const fetchData = async () => {
     try {
       setStatsLoading(true);
-      const [profileRes, dashStatsRes, financeRes] = await Promise.all([
-        api.get('/api/doctors/profile'),
-        api.get('/api/appointments/doctor/stats'),
+      setProfile(user.profile);
+      const [dashStatsRes, financeRes] = await Promise.all([
+        api.get('/api/appointments/stats'),
         api.get('/api/finance/doctor-stats').catch(() => ({ data: { available: 0, pending: 0, cleared: 0, total: 0 } }))
       ]);
-      setProfile(profileRes.data);
       setStats(dashStatsRes.data);
       setFinanceStats(financeRes.data);
     } catch (err) {
