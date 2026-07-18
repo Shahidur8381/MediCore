@@ -20,10 +20,13 @@ export default function AdminDashboard() {
   const [doctors, setDoctors] = useState<any[]>([]);
   const [stats, setStats] = useState({ departments: 0, doctors: 0, patients: 0 });
   const [financialSummary, setFinancialSummary] = useState({ TOTAL_ADMIN_EARNINGS: 0, TOTAL_DOCTOR_EARNINGS: 0, TOTAL_REVENUE: 0 });
+  const [adminFinanceStats, setAdminFinanceStats] = useState({ totalRevenue: 0, hospitalEarned: 0, paymentToClear: 0 });
+  const [pendingWithdrawals, setPendingWithdrawals] = useState<any[]>([]);
   const [ledger, setLedger] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [dataLoading, setDataLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [clearing, setClearing] = useState<string | null>(null);
 
   // Modal states
   const [showDeptModal, setShowDeptModal] = useState(false);
@@ -55,18 +58,22 @@ export default function AdminDashboard() {
   const fetchData = async () => {
     setDataLoading(true);
     try {
-      const [deptRes, docRes, statsRes, finSummaryRes, ledgerRes] = await Promise.all([
+      const [deptRes, docRes, statsRes, finSummaryRes, ledgerRes, adminFinRes, pendingRes] = await Promise.all([
         api.get('/api/departments'),
         api.get('/api/doctors'),
         api.get('/api/stats'),
         api.get('/api/financial/summary'),
-        api.get('/api/financial/ledger')
+        api.get('/api/financial/ledger'),
+        api.get('/api/finance/admin-stats').catch(() => ({ data: { totalRevenue: 0, hospitalEarned: 0, paymentToClear: 0 } })),
+        api.get('/api/finance/pending-withdrawals').catch(() => ({ data: [] }))
       ]);
       setDepartments(deptRes.data);
       setDoctors(docRes.data);
       setStats(statsRes.data);
       setFinancialSummary(finSummaryRes.data);
       setLedger(ledgerRes.data);
+      setAdminFinanceStats(adminFinRes.data);
+      setPendingWithdrawals(pendingRes.data);
     } catch (err) {
       console.error('Error fetching data', err);
     } finally {
@@ -160,6 +167,20 @@ export default function AdminDashboard() {
     } catch (err: any) {
       toast(err.response?.data?.message || 'Failed to update', 'error');
     } finally { setModalLoading(false); }
+  };
+
+  const handleClearPayment = async (doctorId: number) => {
+    if (!confirm('Are you sure you want to mark these pending payments as cleared?')) return;
+    setClearing(String(doctorId));
+    try {
+      await api.post(`/api/finance/clear-withdrawal/${doctorId}`);
+      toast('Payments cleared successfully', 'success');
+      fetchData();
+    } catch (err: any) {
+      toast(err.response?.data?.message || 'Failed to clear payments', 'error');
+    } finally {
+      setClearing(null);
+    }
   };
 
   if (loading || !user) return <FullPageSpinner />;
@@ -352,26 +373,69 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center"><Banknote size={22} className="text-emerald-600" /></div>
                   </div>
-                  <p className="text-3xl font-bold text-gray-900">{dataLoading ? <span className="skeleton inline-block w-12 h-8 rounded" /> : `৳${financialSummary.TOTAL_REVENUE}`}</p>
+                  <p className="text-3xl font-bold text-gray-900">{dataLoading ? <span className="skeleton inline-block w-12 h-8 rounded" /> : `৳${adminFinanceStats.totalRevenue || 0}`}</p>
                   <p className="text-sm text-gray-500 mt-1">Total Revenue</p>
                 </div>
                 <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center"><Building2 size={22} className="text-blue-600" /></div>
                   </div>
-                  <p className="text-3xl font-bold text-gray-900">{dataLoading ? <span className="skeleton inline-block w-12 h-8 rounded" /> : `৳${financialSummary.TOTAL_ADMIN_EARNINGS}`}</p>
+                  <p className="text-3xl font-bold text-gray-900">{dataLoading ? <span className="skeleton inline-block w-12 h-8 rounded" /> : `৳${adminFinanceStats.hospitalEarned || 0}`}</p>
                   <p className="text-sm text-gray-500 mt-1">Hospital (Admin) Earnings</p>
                 </div>
                 <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center"><Users size={22} className="text-violet-600" /></div>
+                    <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center"><Banknote size={22} className="text-amber-600" /></div>
                   </div>
-                  <p className="text-3xl font-bold text-gray-900">{dataLoading ? <span className="skeleton inline-block w-12 h-8 rounded" /> : `৳${financialSummary.TOTAL_DOCTOR_EARNINGS}`}</p>
-                  <p className="text-sm text-gray-500 mt-1">Doctor Earnings</p>
+                  <p className="text-3xl font-bold text-amber-600">{dataLoading ? <span className="skeleton inline-block w-12 h-8 rounded" /> : `৳${adminFinanceStats.paymentToClear || 0}`}</p>
+                  <p className="text-sm text-amber-600/70 mt-1 font-medium">Payments to be Cleared</p>
                 </div>
               </div>
 
+              {/* Pending Withdrawals Table */}
+              <div className="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden mb-8">
+                <div className="px-6 py-4 border-b border-amber-100 bg-amber-50/30 flex items-center gap-2">
+                  <Banknote size={20} className="text-amber-600" />
+                  <h3 className="font-bold text-gray-900">Pending Withdrawals</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-gray-50/80 border-b border-gray-100">
+                      <tr>
+                        <th className="px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Doctor</th>
+                        <th className="px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount to Clear</th>
+                        <th className="px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Oldest Transaction</th>
+                        <th className="px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {pendingWithdrawals.map((req: any) => (
+                        <tr key={req.DOCTOR_ID} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">{req.DOCTOR_NAME}</td>
+                          <td className="px-6 py-4 text-sm font-bold text-amber-600">৳{req.PENDING_AMOUNT}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500">{new Date(req.OLDEST_TRANSACTION).toLocaleString()}</td>
+                          <td className="px-6 py-4 text-right">
+                            <button 
+                              onClick={() => handleClearPayment(req.DOCTOR_ID)}
+                              disabled={clearing === String(req.DOCTOR_ID)}
+                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+                            >
+                              {clearing === String(req.DOCTOR_ID) ? 'Clearing...' : 'Clear Payment'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {pendingWithdrawals.length === 0 && !dataLoading && <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-400 text-sm font-medium">No pending withdrawal requests.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Full Ledger Table */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+                <div className="px-6 py-4 border-b border-gray-100">
+                  <h3 className="font-bold text-gray-900">Full Transaction Ledger</h3>
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead className="bg-gray-50/80 border-b border-gray-100">
@@ -383,6 +447,7 @@ export default function AdminDashboard() {
                         <th className="px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Amount</th>
                         <th className="px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Admin Share</th>
                         <th className="px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Doctor Share</th>
+                        <th className="px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -399,9 +464,14 @@ export default function AdminDashboard() {
                           <td className="px-6 py-4 text-sm font-bold text-gray-900">৳{tx.TOTAL_AMOUNT}</td>
                           <td className="px-6 py-4 text-sm text-blue-600 font-medium">৳{tx.ADMIN_AMOUNT}</td>
                           <td className="px-6 py-4 text-sm text-violet-600 font-medium">৳{tx.DOCTOR_AMOUNT}</td>
+                          <td className="px-6 py-4">
+                            {tx.IS_CLEARED === 'Y' && <span className="text-emerald-600 text-xs font-bold bg-emerald-50 px-2 py-1 rounded">Cleared</span>}
+                            {tx.IS_CLEARED === 'P' && <span className="text-amber-600 text-xs font-bold bg-amber-50 px-2 py-1 rounded">Pending</span>}
+                            {tx.IS_CLEARED === 'N' && <span className="text-gray-400 text-xs font-medium">Earned</span>}
+                          </td>
                         </tr>
                       ))}
-                      {ledger.length === 0 && !dataLoading && <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-400 text-sm">No transactions found.</td></tr>}
+                      {ledger.length === 0 && !dataLoading && <tr><td colSpan={8} className="px-6 py-12 text-center text-gray-400 text-sm">No transactions found.</td></tr>}
                     </tbody>
                   </table>
                 </div>
