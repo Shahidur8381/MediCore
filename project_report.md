@@ -124,11 +124,13 @@ On the consultation page:
 
 ## Financial Logic
 
-| Transaction | Total | Doctor Gets | Admin Gets |
+| Transaction | Total Paid (by Patient) | Doctor Gets | Admin Gets |
 |------------|-------|-------------|-----------|
 | Appointment | ৳X | ৳X × 80% | ৳X × 20% |
 | Lab Test (normal) | ৳X | ৳X × 25% | ৳X × 75% |
-| Lab Test (waived) | ৳X | ৳0 | ৳X × 100% |
+| Lab Test (waived by Dr) | ৳X × 75% (discounted) | ৳0 | ৳X × 75% (100% of total paid) |
+
+> **Note**: All financial calculations use `Math.ceil()` to ensure that partial amounts are rounded up to the nearest whole Integer, avoiding floating point prices.
 
 ---
 
@@ -142,3 +144,5 @@ On the consultation page:
 7. **Fix: drop mutating trigger** — ORA-04091 resolved
 8. **Queue system + Lab role** — DB migration, new Lab user
 9. **Full feature update** — Lab panel, dynamic dashboards, multiple lab orders, queue appointments
+10. **Fix: Schema & Logic** — Fixed invalid trigger `TRG_LEDGER_ID`, missing `PAYMENT_STATUS` column, and corrected Lab Fee Waive discount calculations (Patient now pays 75%).
+11. **UI Polish** — Added expandable lab reports inside the doctor consultation panel and fixed text overflow on the patient prescriptions page.

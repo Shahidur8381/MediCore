@@ -81,12 +81,12 @@ export default function PrescriptionsPage() {
                     <p className="text-sm font-semibold text-gray-800">{px.DIAGNOSIS || 'N/A'}</p>
                   </div>
                 </div>
-                <div className="p-5 grid md:grid-cols-2 gap-6">
+                <div className="p-5 grid md:grid-cols-2 gap-6 items-start">
                   <div>
                     <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1 mb-2">
                       <Pill size={14} /> Medicines
                     </h4>
-                    <div className="bg-violet-50/50 rounded-xl p-4 text-sm text-gray-700 whitespace-pre-wrap border border-violet-100">
+                    <div className="bg-violet-50/50 rounded-xl p-4 text-sm text-gray-700 whitespace-pre-wrap break-words border border-violet-100">
                       {px.MEDICINES || 'No medicines prescribed.'}
                     </div>
                   </div>
@@ -94,7 +94,7 @@ export default function PrescriptionsPage() {
                     <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1 mb-2">
                       <AlertCircle size={14} /> Doctor's Notes
                     </h4>
-                    <div className="bg-amber-50/50 rounded-xl p-4 text-sm text-gray-700 whitespace-pre-wrap border border-amber-100 h-full">
+                    <div className="bg-amber-50/50 rounded-xl p-4 text-sm text-gray-700 whitespace-pre-wrap break-words border border-amber-100">
                       {px.NOTES || 'No additional notes.'}
                     </div>
                   </div>

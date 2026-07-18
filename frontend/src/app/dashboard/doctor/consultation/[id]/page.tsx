@@ -4,7 +4,7 @@ import { useEffect, useState, use } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { FullPageSpinner } from '@/components/LoadingSpinner';
-import { ArrowLeft, FileText, TestTubes, CheckCircle2, User, Calendar, Plus, Trash2, Clock, Hash } from 'lucide-react';
+import { ArrowLeft, FileText, TestTubes, CheckCircle2, User, Calendar, Plus, Trash2, Clock, Hash, FileCheck2 } from 'lucide-react';
 import api from '@/lib/api';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
@@ -35,6 +35,7 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
   const [selectedTest, setSelectedTest] = useState('');
   const [waiveCommission, setWaiveCommission] = useState(false);
   const [orderingLab, setOrderingLab] = useState(false);
+  const [expandedReport, setExpandedReport] = useState<number | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'Doctor')) {
@@ -62,9 +63,9 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
       setAppointment(currentApt);
       setLabTests(labRes.data);
 
-      // Filter ordered tests for this patient in this session
+      // Filter ordered tests for this patient
       const patientTests = orderedRes.data.filter(
-        (r: any) => r.PATIENT_ID === currentApt.PATIENT_ID && r.PAYMENT_STATUS !== 'Paid'
+        (r: any) => r.PATIENT_ID === currentApt.PATIENT_ID
       );
       setOrderedTests(patientTests);
     } catch (err) {
@@ -122,7 +123,7 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
       // Refresh ordered tests
       const orderedRes = await api.get('/api/lab/records');
       const patientTests = orderedRes.data.filter(
-        (r: any) => r.PATIENT_ID === appointment.PATIENT_ID && r.PAYMENT_STATUS !== 'Paid'
+        (r: any) => r.PATIENT_ID === appointment.PATIENT_ID
       );
       setOrderedTests(patientTests);
     } catch (err: any) {
@@ -269,20 +270,63 @@ export default function ConsultationPage({ params }: { params: Promise<{ id: str
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
                 <h3 className="text-sm font-bold text-gray-700">Ordered Tests ({orderedTests.length})</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Patient needs to pay these</p>
+                <p className="text-xs text-gray-400 mt-0.5">Tests ordered for this patient</p>
               </div>
               <div className="divide-y divide-gray-50">
-                {orderedTests.map((t) => (
-                  <div key={t.RECORD_ID} className="px-5 py-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">{t.TEST_NAME}</p>
-                      <p className="text-xs text-gray-400">
-                        ৳{t.TEST_FEE} {t.WAIVE_COMMISSION === 'Y' && <span className="text-emerald-500 ml-1">(waived)</span>}
-                      </p>
+                {orderedTests.map((t) => {
+                  const isCompleted = t.STATUS === 'Completed';
+                  const isExpanded = expandedReport === t.RECORD_ID;
+
+                  return (
+                    <div key={t.RECORD_ID} className="flex flex-col">
+                      <div className="px-5 py-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">{t.TEST_NAME}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            ৳{t.TEST_FEE} {t.WAIVE_COMMISSION === 'Y' && <span className="text-emerald-500 ml-1">(waived)</span>}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
+                            isCompleted ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                            t.PAYMENT_STATUS === 'Paid' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                            'bg-amber-50 text-amber-600 border-amber-100'
+                          }`}>
+                            {isCompleted ? 'Report Ready' : t.PAYMENT_STATUS === 'Paid' ? 'Lab Processing' : 'Pending'}
+                          </span>
+
+                          {isCompleted && (
+                            <button
+                              type="button"
+                              onClick={() => setExpandedReport(isExpanded ? null : t.RECORD_ID)}
+                              className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1"
+                            >
+                              <FileCheck2 size={12} /> {isExpanded ? 'Hide' : 'View'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Expanded Report */}
+                      {isCompleted && isExpanded && (
+                        <div className="border-t border-gray-100 bg-emerald-50/40 p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <FileCheck2 size={14} className="text-emerald-600" />
+                            <h4 className="font-semibold text-gray-900 text-xs">Lab Report</h4>
+                            {t.REPORT_DATE && (
+                              <span className="ml-auto text-[10px] text-gray-400">
+                                {new Date(t.REPORT_DATE).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                          <pre className="text-xs text-gray-700 whitespace-pre-wrap bg-white rounded-lg p-3 border border-gray-100 font-sans">
+                            {t.RESULT_DETAILS}
+                          </pre>
+                        </div>
+                      )}
                     </div>
-                    <span className="text-xs bg-amber-50 text-amber-600 border border-amber-100 px-2 py-0.5 rounded-full font-medium">Pending</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

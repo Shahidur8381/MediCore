@@ -120,8 +120,8 @@ exports.createAppointment = async (req, res) => {
         const queueNumber = queueResult.rows[0].NEXT_QUEUE;
 
         const fee = docResult.rows[0].CONSULTATION_FEE;
-        const doctorAmount = fee * 0.8;
-        const adminAmount = fee * 0.2;
+        const doctorAmount = Math.ceil(fee * 0.8);
+        const adminAmount = fee - doctorAmount; // Ensure exact match
 
         // Insert appointment
         const aptResult = await connection.execute(

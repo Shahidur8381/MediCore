@@ -11,6 +11,7 @@ try {
 
 // Ensure oracledb returns rows as objects instead of arrays
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
+oracledb.fetchAsString = [oracledb.CLOB];
 
 async function initialize() {
   try {

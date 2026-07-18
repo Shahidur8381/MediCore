@@ -114,11 +114,13 @@ exports.payLabTest = async (req, res) => {
 
         const fee = record.TEST_FEE;
         let doctorAmount = 0;
-        let adminAmount = fee;
+        let adminAmount = Math.ceil(fee * 0.75);
+        let totalAmount = Math.ceil(fee * 0.75);
 
         if (record.WAIVE_COMMISSION === 'N') {
-            doctorAmount = fee * 0.25;
-            adminAmount = fee * 0.75;
+            doctorAmount = Math.ceil(fee * 0.25);
+            totalAmount = fee;
+            adminAmount = fee - doctorAmount; // Ensure total matches fee exactly
         }
 
         // Update payment status → moves to "Awaiting Result" for lab to process
@@ -132,7 +134,7 @@ exports.payLabTest = async (req, res) => {
         await connection.execute(
             `INSERT INTO FINANCIAL_LEDGER (Transaction_Type, Reference_ID, Patient_ID, Doctor_ID, Total_Amount, Doctor_Amount, Admin_Amount)
              VALUES ('Lab Test', :1, :2, :3, :4, :5, :6)`,
-            [parseInt(id, 10), record.PATIENT_ID, record.DOCTOR_ID, fee, doctorAmount, adminAmount],
+            [parseInt(id, 10), record.PATIENT_ID, record.DOCTOR_ID, totalAmount, doctorAmount, adminAmount],
             { autoCommit: false }
         );
 
@@ -141,7 +143,7 @@ exports.payLabTest = async (req, res) => {
     } catch (err) {
         if (connection) await connection.rollback();
         console.error(err.message);
-        res.status(500).send('Server error');
+        res.status(500).json({ message: err.message });
     } finally {
         if (connection) {
             try { await connection.close(); } catch (e) {}

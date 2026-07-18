@@ -111,7 +111,17 @@ export default function LabResultsPage() {
                         <p className="text-xs text-gray-500 mt-0.5">
                           Ordered by Dr. {record.DOCTOR_NAME} · {new Date(record.ORDER_DATE).toLocaleDateString()}
                         </p>
-                        <p className="text-xs font-bold text-gray-700 mt-0.5">৳{record.TEST_FEE}</p>
+                        <div className="text-xs font-bold text-gray-700 mt-0.5 flex items-center gap-2">
+                          {record.WAIVE_COMMISSION === 'Y' ? (
+                            <>
+                              <span className="line-through text-gray-400 font-medium">৳{record.TEST_FEE}</span>
+                              <span className="text-emerald-600">৳{Math.ceil(record.TEST_FEE * 0.75)}</span>
+                              <span className="bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider">Discounted</span>
+                            </>
+                          ) : (
+                            <span>৳{record.TEST_FEE}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -125,7 +135,7 @@ export default function LabResultsPage() {
                           onClick={() => handlePayClick(record)}
                           className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
                         >
-                          Pay ৳{record.TEST_FEE}
+                          Pay ৳{record.WAIVE_COMMISSION === 'Y' ? Math.ceil(record.TEST_FEE * 0.75) : record.TEST_FEE}
                         </button>
                       )}
 
