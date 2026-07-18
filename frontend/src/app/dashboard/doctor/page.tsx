@@ -15,7 +15,7 @@ export default function DoctorDashboard() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<any>(null);
-  const [stats, setStats] = useState({ today: 0, pending: 0, total: 0 });
+  const [stats, setStats] = useState({ todayAppointments: 0, totalPrescriptions: 0, totalLabOrders: 0 });
   const [financeStats, setFinanceStats] = useState({ available: 0, pending: 0, cleared: 0, total: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
   const [withdrawing, setWithdrawing] = useState(false);
@@ -61,6 +61,7 @@ export default function DoctorDashboard() {
   if (loading || !user) return <FullPageSpinner />;
 
   const quickStats = [
+    { label: "Today's Appointments", value: stats.todayAppointments, icon: Calendar, color: 'blue', href: '/dashboard/doctor/appointments' },
     { label: 'Prescriptions Written', value: stats.totalPrescriptions, icon: FileText, color: 'violet', href: '/dashboard/doctor/appointments' },
     { label: 'Lab Tests Ordered', value: stats.totalLabOrders, icon: ClipboardList, color: 'amber', href: '/dashboard/doctor/appointments' },
   ];

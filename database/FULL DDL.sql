@@ -18,7 +18,7 @@ CREATE TABLE medicore.appointment (
     patient_id       NUMBER NOT NULL,
     doctor_id        NUMBER NOT NULL,
     appointment_date DATE NOT NULL,
-    appointment_time VARCHAR2(10 BYTE) NOT NULL,
+    appointment_time VARCHAR2(10 BYTE) DEFAULT '00:00',
     booking_date     DATE DEFAULT sysdate,
     status           VARCHAR2(20 BYTE) DEFAULT 'Pending',
     queue_number     NUMBER DEFAULT 0
