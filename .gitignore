@@ -27,3 +27,7 @@ Thumbs.db
 *.md
 !/README.md
 !/readme.md
+
+# Ignore generated HTML presentations and reports
+report.html
+presentation.html
