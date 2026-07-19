@@ -29,6 +29,7 @@ export default function DoctorDashboard() {
   }, [user, loading]);
 
   const fetchData = async () => {
+    if (!user) return;
     try {
       setStatsLoading(true);
       setProfile(user.profile);

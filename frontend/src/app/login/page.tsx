@@ -135,6 +135,9 @@ export default function Login() {
             <div className="flex justify-between border-b border-indigo-100 pb-1">
               <span>Patient:</span> <span className="font-mono bg-indigo-100 px-1 rounded">Patient1</span> - <span className="font-mono bg-indigo-100 px-1 rounded">Patient5</span>
             </div>
+            <div className="flex justify-between border-b border-indigo-100 pb-1">
+              <span>Lab:</span> <span className="font-mono bg-indigo-100 px-1 rounded">lab</span>
+            </div>
             <div className="flex justify-between pt-1 font-medium">
               <span>Password (All):</span> <span className="font-mono bg-indigo-100 px-1 rounded">MediCore</span>
             </div>

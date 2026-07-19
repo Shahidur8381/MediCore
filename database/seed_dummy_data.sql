@@ -15,6 +15,10 @@ DELETE FROM medicore.department;
 INSERT INTO medicore.user_account (user_id, username, password_hash, role, status, created_date)
 VALUES (100, 'admin', '$2b$10$snyUAIAGmA9WYniWwzRnre8ReuMwcCl0Wy0j07x.auj6fAdakcsyq', 'Admin', 'Active', TO_DATE('21-JUN-2026', 'DD-MON-YYYY'));
 
+-- Insert Lab Account
+INSERT INTO medicore.user_account (user_id, username, password_hash, role, status, created_date)
+VALUES (301, 'lab', '$2b$10$snyUAIAGmA9WYniWwzRnre8ReuMwcCl0Wy0j07x.auj6fAdakcsyq', 'Lab', 'Active', TO_DATE('21-JUN-2026', 'DD-MON-YYYY'));
+
 -- Insert Dummy Department
 INSERT INTO medicore.department (department_id, department_name, department_head)
 VALUES (100, 'General Medicine', 'Dr. Smith');
@@ -95,5 +99,38 @@ VALUES (205, 'Patient 5', 'Male', '555-0205', 'patient5@medicore.com', TO_DATE('
 
 INSERT INTO medicore.user_account (user_id, patient_id, username, password_hash, role, status, created_date)
 VALUES (205, 205, 'Patient5', '$2b$10$snyUAIAGmA9WYniWwzRnre8ReuMwcCl0Wy0j07x.auj6fAdakcsyq', 'Patient', 'Active', TO_DATE('21-JUN-2026', 'DD-MON-YYYY'));
+
+-- ==========================================
+-- Insert Dummy Lab Tests
+-- ==========================================
+INSERT INTO medicore.lab_test (test_id, test_name, description, test_fee, status)
+VALUES (1, 'CBC (Complete Blood Count)', 'Routine blood test for general health evaluation', 500, 'Available');
+
+INSERT INTO medicore.lab_test (test_id, test_name, description, test_fee, status)
+VALUES (2, 'Blood Sugar (Fasting)', 'Measures blood glucose level after overnight fast', 150, 'Available');
+
+INSERT INTO medicore.lab_test (test_id, test_name, description, test_fee, status)
+VALUES (3, 'Lipid Profile', 'Measures cholesterol and triglycerides in blood', 800, 'Available');
+
+INSERT INTO medicore.lab_test (test_id, test_name, description, test_fee, status)
+VALUES (4, 'Serum Creatinine', 'Measures kidney function', 400, 'Available');
+
+INSERT INTO medicore.lab_test (test_id, test_name, description, test_fee, status)
+VALUES (5, 'SGPT (ALT)', 'Liver function test', 400, 'Available');
+
+INSERT INTO medicore.lab_test (test_id, test_name, description, test_fee, status)
+VALUES (6, 'Chest X-Ray (P/A View)', 'Radiograph of the chest', 600, 'Available');
+
+INSERT INTO medicore.lab_test (test_id, test_name, description, test_fee, status)
+VALUES (7, 'ECG', 'Electrocardiogram for heart function', 400, 'Available');
+
+INSERT INTO medicore.lab_test (test_id, test_name, description, test_fee, status)
+VALUES (8, 'USG Whole Abdomen', 'Ultrasound sonography of whole abdomen', 1200, 'Available');
+
+INSERT INTO medicore.lab_test (test_id, test_name, description, test_fee, status)
+VALUES (9, 'Urine R/E', 'Urine Routine Examination', 200, 'Available');
+
+INSERT INTO medicore.lab_test (test_id, test_name, description, test_fee, status)
+VALUES (10, 'Dengue NS1 Antigen', 'Test for early detection of Dengue virus', 500, 'Available');
 
 COMMIT;
